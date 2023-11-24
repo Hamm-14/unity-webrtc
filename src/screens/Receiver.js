@@ -1,25 +1,30 @@
-import useScript from "../hooks/useScript";
+// import useScript from "../hooks/useScript";
 import "./css/Receiver.css";
 // import Receiver from "../scripts/receiver.js";
-import { useEffect } from "react";
+import { useEffect, useState, useRef } from "react";
 import { getServerConfig, getRTCConfiguration } from "../scripts/config.js";
 import { createDisplayStringArray } from "../scripts/stats.js";
 import { VideoPlayer } from "../scripts/videoplayer.js";
 import { RenderStreaming } from "../scripts/renderstreaming.js";
 import { Signaling, WebSocketSignaling } from "../scripts/signaling.js";
+import playButtonImage from "../static/images/Play.png";
 
 const Reciever = () => {
-  let playButton;
-  let renderstreaming;
-  let useWebSocket;
-  let codecPreferences;
-  let supportsSetCodecPreferences;
-  let messageDiv;
-  let playerDiv;
-  let lockMouseCheck;
-  let videoPlayer;
-  let lastStats;
-  let intervalId;
+  const [isPlayButtonVisible, setIsPlayButtonVisible] = useState(false);
+  const [showWarning, setShowWarning] = useState(false);
+  const [message, setMessage] = useState(false);
+  const [codecList, setCodecList] = useState([]);
+  let renderstreaming = useRef(null);
+  let useWebSocket = useRef(null);
+  let codecPreferencesDiv = useRef(null);
+  let supportsSetCodecPreferences = useRef(null);
+  // let messageDiv = useRef(null);
+  let playerDiv = useRef(null);
+  let lockMouseCheckDiv = useRef(null);
+  let videoPlayer = useRef(null);
+  // let videoPlayer;
+  let lastStats = useRef(null);
+  let intervalId = useRef(null);
 
   // useScript(
   //   "https://webrtc.github.io/adapter/adapter-latest.js",
@@ -37,125 +42,134 @@ const Reciever = () => {
   // useScript("../scripts/receiver.js", "text/javascript");
 
   useEffect(() => {
-    window.document.oncontextmenu = function () {
-      return false; // cancel default menu
-    };
+    // window.document.oncontextmenu = function () {
+    //   return false; // cancel default menu
+    // };
 
-    window.addEventListener(
-      "resize",
-      function () {
-        videoPlayer.resizeVideo();
-      },
-      true
-    );
+    window.addEventListener("resize", resize, true);
 
-    window.addEventListener(
-      "beforeunload",
-      async () => {
-        if (!renderstreaming) return;
-        await renderstreaming.stop();
-      },
-      true
-    );
+    window.addEventListener("beforeunload", beforeUnload, true);
 
     initializeReceiver();
+
+    return () => {
+      window.removeEventListener("resize", resize);
+      window.removeEventListener("beforeunload", beforeUnload);
+    };
   }, []);
 
+  const resize = () => {
+    videoPlayer.current.resizeVideo();
+  };
+
+  const beforeUnload = async () => {
+    if (!renderstreaming.current) return;
+    await renderstreaming.current.stop();
+  };
+
   const initializeReceiver = () => {
-    codecPreferences = document.getElementById("codecPreferences");
-    supportsSetCodecPreferences =
+    // codecPreferences = document.getElementById("codecPreferences");
+    supportsSetCodecPreferences.current =
       window.RTCRtpTransceiver &&
       "setCodecPreferences" in window.RTCRtpTransceiver.prototype;
-    messageDiv = document.getElementById("message");
+    // messageDiv = document.getElementById("message");
     // console.log("message Div", messageDiv);
-    messageDiv.style.display = "none";
+    // messageDiv.current.style.display = "none";
 
-    playerDiv = document.getElementById("player");
-    lockMouseCheck = document.getElementById("lockMouseCheck");
-    videoPlayer = new VideoPlayer();
+    // playerDiv = document.getElementById("player");
+    // lockMouseCheck = document.getElementById("lockMouseCheck");
+    videoPlayer.current = new VideoPlayer();
 
     setup();
   };
 
   async function setup() {
     const res = await getServerConfig();
-    useWebSocket = res.useWebSocket;
+    useWebSocket.current = res.useWebSocket;
     showWarningIfNeeded(res.startupMode);
     showCodecSelect();
     showPlayButton();
   }
 
   function showWarningIfNeeded(startupMode) {
-    const warningDiv = document.getElementById("warning");
-    if (startupMode == "private") {
-      warningDiv.innerHTML =
-        "<h4>Warning</h4> This sample is not working on Private Mode.";
-      warningDiv.hidden = false;
+    // const warningDiv = document.getElementById("warning");
+    if (startupMode === "private") {
+      // warningDiv.innerHTML =
+      //   "<h4>Warning</h4> This sample is not working on Private Mode.";
+      // warningDiv.hidden = false;
+      setShowWarning(true);
     }
   }
 
   function showPlayButton() {
     if (!document.getElementById("playButton")) {
-      const elementPlayButton = document.createElement("img");
-      elementPlayButton.id = "playButton";
-      elementPlayButton.src = "../../images/Play.png";
-      elementPlayButton.alt = "Start Streaming";
-      playButton = document
-        .getElementById("player")
-        .appendChild(elementPlayButton);
-      playButton.addEventListener("click", onClickPlayButton);
+      setIsPlayButtonVisible(true);
+      // const elementPlayButton = document.createElement('img');
+      // elementPlayButton.id = 'playButton';
+      // elementPlayButton.src = playButtonImage;
+      // elementPlayButton.alt = 'Start Streaming';
+      // playButton = document.getElementById('player').appendChild(elementPlayButton);
+      // playButton.addEventListener('click', onClickPlayButton);
     }
   }
 
   function onClickPlayButton() {
-    playButton.style.display = "none";
-
+    setIsPlayButtonVisible(false);
+    // playButton.style.display = 'none';
     // add video player
-    videoPlayer.createPlayer(playerDiv, lockMouseCheck);
+    videoPlayer.current.createPlayer(
+      playerDiv.current,
+      lockMouseCheckDiv.current
+    );
     setupRenderStreaming();
   }
 
   async function setupRenderStreaming() {
-    codecPreferences.disabled = true;
+    codecPreferencesDiv.current.disabled = true;
 
-    const signaling = useWebSocket ? new WebSocketSignaling() : new Signaling();
+    const signaling = useWebSocket.current
+      ? new WebSocketSignaling()
+      : new Signaling();
     const config = getRTCConfiguration();
-    renderstreaming = new RenderStreaming(signaling, config);
-    renderstreaming.onConnect = onConnect;
-    renderstreaming.onDisconnect = onDisconnect;
-    renderstreaming.onTrackEvent = (data) => videoPlayer.addTrack(data.track);
-    renderstreaming.onGotOffer = setCodecPreferences;
+    renderstreaming.current = new RenderStreaming(signaling, config);
+    renderstreaming.current.onConnect = onConnect;
+    renderstreaming.current.onDisconnect = onDisconnect;
+    renderstreaming.current.onTrackEvent = (data) =>
+      videoPlayer.current.addTrack(data.track);
+    renderstreaming.current.onGotOffer = setCodecPreferences;
 
-    await renderstreaming.start();
-    await renderstreaming.createConnection();
+    await renderstreaming.current.start();
+    await renderstreaming.current.createConnection();
   }
 
   function onConnect() {
-    const channel = renderstreaming.createDataChannel("input");
-    videoPlayer.setupInput(channel);
+    const channel = renderstreaming.current.createDataChannel("input");
+    videoPlayer.current.setupInput(channel);
     showStatsMessage();
   }
 
   async function onDisconnect(connectionId) {
     clearStatsMessage();
-    messageDiv.style.display = "block";
-    messageDiv.innerText = `Disconnect peer on ${connectionId}.`;
+    // messageDiv.current.style.display = "block";
+    // messageDiv.current.innerText = `Disconnect peer on ${connectionId}.`;
+    setMessage(`Disconnect peer on ${connectionId}.`);
 
-    await renderstreaming.stop();
-    renderstreaming = null;
-    videoPlayer.deletePlayer();
-    if (supportsSetCodecPreferences) {
-      codecPreferences.disabled = false;
+    await renderstreaming.current.stop();
+    renderstreaming.current = null;
+    videoPlayer.current.deletePlayer();
+    if (supportsSetCodecPreferences.current) {
+      codecPreferencesDiv.current.disabled = false;
     }
     showPlayButton();
   }
 
   function setCodecPreferences() {
-    /** @type {RTCRtpCodecCapability[] | null} */
     let selectedCodecs = null;
-    if (supportsSetCodecPreferences) {
+    if (supportsSetCodecPreferences.current) {
       const preferredCodec =
-        codecPreferences.options[codecPreferences.selectedIndex];
+        codecPreferencesDiv.current.options[
+          codecPreferencesDiv.current.selectedIndex
+        ];
       if (preferredCodec.value !== "") {
         const [mimeType, sdpFmtpLine] = preferredCodec.value.split(" ");
         const { codecs } = RTCRtpSender.getCapabilities("video");
@@ -170,32 +184,40 @@ const Reciever = () => {
     if (selectedCodecs == null) {
       return;
     }
-    const transceivers = renderstreaming
+    const transceivers = renderstreaming.current
       .getTransceivers()
-      .filter((t) => t.receiver.track.kind == "video");
+      .filter((t) => t.receiver.track.kind === "video");
     if (transceivers && transceivers.length > 0) {
       transceivers.forEach((t) => t.setCodecPreferences(selectedCodecs));
     }
   }
 
   function showCodecSelect() {
-    if (!supportsSetCodecPreferences) {
-      messageDiv.style.display = "block";
-      messageDiv.innerHTML = `Current Browser does not support <a href="https://developer.mozilla.org/en-US/docs/Web/API/RTCRtpTransceiver/setCodecPreferences">RTCRtpTransceiver.setCodecPreferences</a>.`;
+    if (!supportsSetCodecPreferences.current) {
+      // messageDiv.current.style.display = "block";
+      // messageDiv.current.innerHTML = `Current Browser does not support <a href="https://developer.mozilla.org/en-US/docs/Web/API/RTCRtpTransceiver/setCodecPreferences">RTCRtpTransceiver.setCodecPreferences</a>.`;
+      setMessage(
+        `Current Browser does not support <a href="https://developer.mozilla.org/en-US/docs/Web/API/RTCRtpTransceiver/setCodecPreferences">RTCRtpTransceiver.setCodecPreferences</a>.`
+      );
       return;
     }
 
     const codecs = RTCRtpSender.getCapabilities("video").codecs;
+    let codecOptionsList = [];
     codecs.forEach((codec) => {
       if (["video/red", "video/ulpfec", "video/rtx"].includes(codec.mimeType)) {
         return;
       }
-      const option = document.createElement("option");
-      option.value = (codec.mimeType + " " + (codec.sdpFmtpLine || "")).trim();
-      option.innerText = option.value;
-      codecPreferences.appendChild(option);
+      // const option = document.createElement("option");
+      codecOptionsList.push(
+        (codec.mimeType + " " + (codec.sdpFmtpLine || "")).trim()
+      );
+      // option.value = (codec.mimeType + " " + (codec.sdpFmtpLine || "")).trim();
+      // option.innerText = option.value;
+      // codecPreferencesDiv.current.appendChild(option);
     });
-    codecPreferences.disabled = false;
+    codecPreferencesDiv.current.disabled = false;
+    setCodecList(codecOptionsList);
   }
 
   // function showStatsMessage() {
@@ -207,56 +229,88 @@ const Reciever = () => {
   // }
 
   function showStatsMessage() {
-    intervalId = setInterval(async () => {
-      if (renderstreaming == null) {
+    intervalId.current = setInterval(async () => {
+      if (renderstreaming.current == null) {
         return;
       }
 
-      const stats = await renderstreaming.getStats();
+      const stats = await renderstreaming.current.getStats();
       if (stats == null) {
         return;
       }
 
-      const array = createDisplayStringArray(stats, lastStats);
+      const array = createDisplayStringArray(stats, lastStats.current);
       if (array.length) {
-        messageDiv.style.display = 'block';
-        messageDiv.innerHTML = array.join('<br>');
+        // messageDiv.current.style.display = "block";
+        // messageDiv.current.innerHTML = array.join("<br>");
+        let messages = array.join("<br>");
+        setMessage(messages);
       }
-      lastStats = stats;
+      lastStats.current = stats;
     }, 1000);
   }
 
   function clearStatsMessage() {
-    if (intervalId) {
-      clearInterval(intervalId);
+    if (intervalId.current) {
+      clearInterval(intervalId.current);
     }
-    lastStats = null;
-    intervalId = null;
-    messageDiv.style.display = 'none';
-    messageDiv.innerHTML = '';
+    lastStats.current = null;
+    intervalId.current = null;
+    setMessage(null);
+    // messageDiv.current.style.display = "none";
+    // messageDiv.current.innerHTML = "";
   }
 
+  console.log("rerendering...");
   return (
     <div id="container">
       <h1>Receiver Sample</h1>
 
-      <div id="warning" hidden={false}></div>
+      {showWarning && (
+        <div id="warning">
+          <h4>Warning</h4> This sample is not working on Private Mode.
+        </div>
+      )}
 
-      <div id="player"></div>
+      <div ref={playerDiv} id="player">
+        {isPlayButtonVisible && (
+          <img
+            src={playButtonImage}
+            alt="Start Streaming"
+            id="playButton"
+            onClick={onClickPlayButton}
+          />
+        )}
+      </div>
 
       <div className="box">
         <span>Codec preferences:</span>
-        <select id="codecPreferences" autoComplete="off" disabled>
+        <select
+          ref={codecPreferencesDiv}
+          id="codecPreferences"
+          autoComplete="off"
+          disabled
+        >
           <option value="">Default</option>
+          {codecList?.map((codec, index) => (
+            <option value={codec} key={index}>
+              {codec}
+            </option>
+          ))}
         </select>
       </div>
 
       <div className="box">
         <span>Lock Cursor to Player:</span>
-        <input type="checkbox" id="lockMouseCheck" autoComplete="off" />
+        <input
+          ref={lockMouseCheckDiv}
+          type="checkbox"
+          id="lockMouseCheck"
+          autoComplete="off"
+        />
       </div>
 
-      <div id="message"></div>
+      {message && <div id="message">{message}</div>}
     </div>
   );
 };

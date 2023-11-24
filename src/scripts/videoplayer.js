@@ -29,11 +29,11 @@ export class VideoPlayer {
     this.playerElement.appendChild(this.videoElement);
 
     // add fullscreen button
-    this.fullScreenButtonElement = document.createElement('img');
-    this.fullScreenButtonElement.id = 'fullscreenButton';
-    this.fullScreenButtonElement.src = '../images/FullScreen.png';
-    this.fullScreenButtonElement.addEventListener("click", this._onClickFullscreenButton.bind(this));
-    this.playerElement.appendChild(this.fullScreenButtonElement);
+    // this.fullScreenButtonElement = document.createElement('img');
+    // this.fullScreenButtonElement.id = 'fullscreenButton';
+    // this.fullScreenButtonElement.src = '../images/FullScreen.png';
+    // this.fullScreenButtonElement.addEventListener("click", this._onClickFullscreenButton.bind(this));
+    // this.playerElement.appendChild(this.fullScreenButtonElement);
 
     document.addEventListener('webkitfullscreenchange', this._onFullscreenChange.bind(this));
     document.addEventListener('fullscreenchange', this._onFullscreenChange.bind(this));
@@ -53,7 +53,7 @@ export class VideoPlayer {
       else if (document.documentElement.webkitRequestFullscreen) {
         document.documentElement.webkitRequestFullscreen(Element.ALLOW_KEYBOARD_INPUT);
       } else {
-        if (this.playerElement.style.position == "absolute") {
+        if (this.playerElement.style.position === "absolute") {
           this.playerElement.style.position = "relative";
         } else {
           this.playerElement.style.position = "absolute";
